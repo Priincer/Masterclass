@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
                 .timestamp(Instant.now().toString())
                 .status(status.value())
                 .error(status.getReasonPhrase())
-                .code(ex.getCode().name())
+                .code(ex.getErrorCode().name())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();

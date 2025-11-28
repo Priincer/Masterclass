@@ -22,8 +22,8 @@ class UserRepositoryTest {
         User user = User.builder()
                 .email("test@example.com")
                 .password("secret")
-                .firstName("Markus")
-                .lastName("Redl")
+                .firstName("Hans")
+                .lastName("Peter")
                 .roles(Set.of(Role.USER))
                 .build();
 
