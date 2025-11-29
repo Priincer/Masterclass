@@ -24,19 +24,19 @@ public class UserService {
 
     @Transactional
     public User registerUser(RegisterRequest request) {
-        if (userRepository.findByEmail(request.email()).isPresent()) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new ApiException(
                     HttpStatus.BAD_REQUEST,
                     ErrorCode.EMAIL_ALREADY_IN_USE,
-                    "Email already in use: " + request.email()
+                    "Email already in use: " + request.getEmail()
             );
         }
 
         User user = User.builder()
-                .email(request.email())
-                .password(passwordEncoder.encode(request.password()))
-                .firstName(request.firstName())
-                .lastName(request.lastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
                 .roles(Set.of(Role.USER))
                 .build();
 
