@@ -2,6 +2,7 @@ package com.masterclass.auth.user.controller;
 
 import com.masterclass.auth.user.dto.AuthResponse;
 import com.masterclass.auth.user.dto.LoginRequest;
+import com.masterclass.auth.user.dto.RefreshTokenRequest;
 import com.masterclass.auth.user.dto.RegisterRequest;
 import com.masterclass.auth.user.service.AuthService;
 import jakarta.validation.Valid;
@@ -26,6 +27,14 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        AuthResponse response = authService.refresh(request.getRefreshToken());
         return ResponseEntity.ok(response);
     }
 }

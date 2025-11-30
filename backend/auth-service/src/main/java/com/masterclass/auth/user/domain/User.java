@@ -3,6 +3,7 @@ package com.masterclass.auth.user.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -39,4 +40,12 @@ public class User {
     )
     @Column(name = "role")
     private Set<Role> roles;
+
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private Set<RefreshToken> refreshTokens = new HashSet<>();
 }
