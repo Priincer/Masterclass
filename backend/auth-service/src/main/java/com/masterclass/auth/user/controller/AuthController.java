@@ -1,5 +1,6 @@
 package com.masterclass.auth.user.controller;
 
+import com.masterclass.auth.security.model.SecurityUser;
 import com.masterclass.auth.user.dto.AuthResponse;
 import com.masterclass.auth.user.dto.LoginRequest;
 import com.masterclass.auth.user.dto.RefreshTokenRequest;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -28,6 +30,15 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal SecurityUser currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        authService.logoutCurrentUser(currentUser);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/refresh")

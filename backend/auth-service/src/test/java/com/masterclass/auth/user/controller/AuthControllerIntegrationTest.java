@@ -134,7 +134,6 @@ class AuthControllerIntegrationTest {
         registerUser(email, "Refresh", "User");
         AuthResponse loginResponse = loginAndGetToken(email, PASSWORD);
 
-        String oldAccessToken = loginResponse.getAccessToken();
         String oldRefreshToken = loginResponse.getRefreshToken();
 
         RefreshTokenRequest refreshRequest = RefreshTokenRequest.builder()
@@ -159,7 +158,7 @@ class AuthControllerIntegrationTest {
         // aber der Refresh-Token MUSS neu sein.
         assertThat(refreshed.getRefreshToken()).isNotEqualTo(oldRefreshToken);
         // optional: AccessToken darf gleich sein – aber wir erwarten zumindest einen gültigen String
-        assertThat(refreshed.getAccessToken()).isEqualTo(oldAccessToken);
+        assertThat(refreshed.getAccessToken()).isNotBlank();
     }
 
     @Test
@@ -182,6 +181,39 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk());
 
         // 2. Refresh mit demselben Token: 401 + ErrorResponse aus deiner Implementierung
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(refreshRequest)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
+                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token."))
+                .andExpect(jsonPath("$.path").value("/api/auth/refresh"));
+    }
+
+    @Test
+    void logout_shouldInvalidateRefreshToken() throws Exception {
+        String email = "it-logout@test.com";
+
+        // 1. User registrieren
+        registerUser(email, "Logout", "User");
+
+        // 2. Einloggen und Tokens holen
+        AuthResponse loginResponse = loginAndGetToken(email, PASSWORD);
+
+        String accessToken = loginResponse.getAccessToken();
+        String refreshToken = loginResponse.getRefreshToken();
+
+        // 3. Logout mit gültigem Access Token
+        mockMvc.perform(post("/api/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isNoContent());
+
+        // 4. Versuch, den alten Refresh-Token zu verwenden → muss fehlschlagen
+        RefreshTokenRequest refreshRequest = RefreshTokenRequest.builder()
+                .refreshToken(refreshToken)
+                .build();
+
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(refreshRequest)))

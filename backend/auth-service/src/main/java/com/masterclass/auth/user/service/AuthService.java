@@ -70,6 +70,12 @@ public class AuthService {
     }
 
     @Transactional
+    public void logoutCurrentUser(SecurityUser currentUser) {
+        User domainUser = currentUser.getUser();
+        refreshTokenService.revokeAllForUser(domainUser);
+    }
+
+    @Transactional
     public AuthResponse refresh(String refreshTokenValue) {
 
         RefreshToken validToken = refreshTokenService.findValidToken(refreshTokenValue)
