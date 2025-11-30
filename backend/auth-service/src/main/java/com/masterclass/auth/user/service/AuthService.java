@@ -50,16 +50,16 @@ public class AuthService {
                 )
         );
 
-        SecurityUser principal = (SecurityUser) authentication.getPrincipal();
-        String token = jwtTokenService.generateToken(principal);
+        SecurityUser securityUser = (SecurityUser) authentication.getPrincipal();
 
-        User user = userService.findByEmail(principal.getUsername())
+        User user = userService.findByEmail(securityUser.getUsername())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         ErrorCode.INTERNAL_ERROR,
                         "Authenticated user not found"
                 ));
 
+        String token = jwtTokenService.generateToken(securityUser);
         RefreshToken refreshToken = refreshTokenService.createToken(user);
 
         return AuthResponse.builder()
