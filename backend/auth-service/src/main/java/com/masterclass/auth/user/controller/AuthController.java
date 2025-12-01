@@ -1,10 +1,7 @@
 package com.masterclass.auth.user.controller;
 
 import com.masterclass.auth.security.model.SecurityUser;
-import com.masterclass.auth.user.dto.AuthResponse;
-import com.masterclass.auth.user.dto.LoginRequest;
-import com.masterclass.auth.user.dto.RefreshTokenRequest;
-import com.masterclass.auth.user.dto.RegisterRequest;
+import com.masterclass.auth.user.dto.*;
 import com.masterclass.auth.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,5 +44,22 @@ public class AuthController {
     ) {
         AuthResponse response = authService.refresh(request.getRefreshToken());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<Void> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequestDto request
+    ) {
+        authService.requestPasswordReset(request.getEmail());
+        // Egal ob User existiert oder nicht → 204, damit kein User-Enum leak
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<Void> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request
+    ) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.noContent().build();
     }
 }

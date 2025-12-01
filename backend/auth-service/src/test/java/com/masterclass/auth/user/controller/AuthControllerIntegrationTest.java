@@ -2,10 +2,16 @@ package com.masterclass.auth.user.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.masterclass.auth.AuthServiceApplication;
+import com.masterclass.auth.user.domain.PasswordResetToken;
+import com.masterclass.auth.user.domain.User;
 import com.masterclass.auth.user.dto.AuthResponse;
 import com.masterclass.auth.user.dto.LoginRequest;
+import com.masterclass.auth.user.dto.PasswordResetConfirmRequest;
+import com.masterclass.auth.user.dto.PasswordResetRequestDto;
 import com.masterclass.auth.user.dto.RefreshTokenRequest;
 import com.masterclass.auth.user.dto.RegisterRequest;
+import com.masterclass.auth.user.service.PasswordResetService;
+import com.masterclass.auth.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -31,6 +37,12 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @Autowired
+    UserService userService;
+
+    @Autowired
+    PasswordResetService passwordResetService;
 
     // ------------------------------------------------------------------------
     // Helper
@@ -79,7 +91,7 @@ class AuthControllerIntegrationTest {
     }
 
     // ------------------------------------------------------------------------
-    // Erfolgsfälle
+    // Erfolgsfälle – Register / Login / Me
     // ------------------------------------------------------------------------
 
     @Test
@@ -126,6 +138,10 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.roles[0]").value("USER"));
     }
+
+    // ------------------------------------------------------------------------
+    // Erfolgsfälle – Refresh & Logout
+    // ------------------------------------------------------------------------
 
     @Test
     void refresh_shouldReturnNewTokens_whenRefreshTokenIsValid() throws Exception {
@@ -225,7 +241,79 @@ class AuthControllerIntegrationTest {
     }
 
     // ------------------------------------------------------------------------
-    // Fehlerfälle
+    // Erfolgsfälle – Password Reset
+    // ------------------------------------------------------------------------
+
+    @Test
+    void passwordResetRequest_shouldReturn204_whenEmailExists() throws Exception {
+        String email = "it-reset-existing@test.com";
+
+        // User existiert
+        registerUser(email, "Reset", "Existing");
+
+        PasswordResetRequestDto request = PasswordResetRequestDto.builder()
+                .email(email)
+                .build();
+
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void passwordResetRequest_shouldReturn204_whenEmailDoesNotExist() throws Exception {
+        PasswordResetRequestDto request = PasswordResetRequestDto.builder()
+                .email("does-not-exist@test.com")
+                .build();
+
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void passwordResetConfirm_shouldReturn204_andAllowLoginWithNewPassword_whenTokenValid() throws Exception {
+        String email = "it-reset-confirm@test.com";
+        String newPassword = "newPassword123!";
+
+        // 1. User registrieren
+        registerUser(email, "ResetConfirm", "User");
+
+        // 2. Domain-User holen
+        User user = userService.findByEmail(email).orElseThrow();
+
+        // 3. Gültigen Reset-Token erzeugen (Service-Layer)
+        PasswordResetToken resetToken = passwordResetService.createToken(user);
+
+        // 4. Confirm-Request an Controller
+        PasswordResetConfirmRequest confirmRequest = PasswordResetConfirmRequest.builder()
+                .token(resetToken.getToken())
+                .newPassword(newPassword)
+                .build();
+
+        mockMvc.perform(post("/api/auth/password-reset/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(confirmRequest)))
+                .andExpect(status().isNoContent());
+
+        // 5. Mit neuem Passwort einloggen -> muss funktionieren
+        LoginRequest loginRequest = LoginRequest.builder()
+                .email(email)
+                .password(newPassword)
+                .build();
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+    }
+
+    // ------------------------------------------------------------------------
+    // Fehlerfälle – Register / Login / Me / Refresh / Password Reset
     // ------------------------------------------------------------------------
 
     @Test
@@ -324,5 +412,22 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
                 .andExpect(jsonPath("$.message").value("Invalid or expired refresh token."))
                 .andExpect(jsonPath("$.path").value("/api/auth/refresh"));
+    }
+
+    @Test
+    void passwordResetConfirm_shouldReturn400_andErrorBody_whenTokenInvalid() throws Exception {
+        PasswordResetConfirmRequest request = PasswordResetConfirmRequest.builder()
+                .token("this-token-does-not-exist")
+                .newPassword("irrelevant")
+                .build();
+
+        mockMvc.perform(post("/api/auth/password-reset/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("INVALID_PASSWORD_RESET_TOKEN"))
+                .andExpect(jsonPath("$.message").value("Invalid or expired password reset token."))
+                .andExpect(jsonPath("$.path").value("/api/auth/password-reset/confirm"));
     }
 }

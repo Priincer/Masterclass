@@ -4,6 +4,7 @@ import com.masterclass.auth.common.api.ErrorCode;
 import com.masterclass.auth.common.exception.ApiException;
 import com.masterclass.auth.security.jwt.JwtTokenService;
 import com.masterclass.auth.security.model.SecurityUser;
+import com.masterclass.auth.user.domain.PasswordResetToken;
 import com.masterclass.auth.user.domain.RefreshToken;
 import com.masterclass.auth.user.domain.User;
 import com.masterclass.auth.user.dto.AuthResponse;
@@ -25,6 +26,7 @@ public class AuthService {
     private final UserService userService;
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetService passwordResetService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -99,5 +101,37 @@ public class AuthService {
                 .refreshToken(newRefreshToken.getToken())
                 .tokenType("Bearer")
                 .build();
+    }
+
+    @Transactional
+    public void requestPasswordReset(String email) {
+        userService.findByEmail(email).ifPresent(user -> {
+            PasswordResetToken token = passwordResetService.createToken(user);
+
+            // TODO: Token per Notification-Service versenden (z.B. E-Mail mit Link)
+            // z.B. /reset-password?token=<token.getToken()>
+        });
+
+        // Wenn User nicht gefunden -> absichtlich nichts tun.
+        // Nach außen immer gleiche Response (Controller: 204 No Content).
+    }
+
+    @Transactional
+    public void resetPassword(String tokenValue, String newPassword) {
+
+        PasswordResetToken validToken = passwordResetService.findValidToken(tokenValue)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.BAD_REQUEST,
+                        ErrorCode.INVALID_PASSWORD_RESET_TOKEN,
+                        "Invalid or expired password reset token."
+                ));
+
+        User user = validToken.getUser();
+
+        userService.updatePassword(user, newPassword);
+
+        passwordResetService.markAsUsed(validToken);
+
+        refreshTokenService.revokeAllForUser(user);
     }
 }

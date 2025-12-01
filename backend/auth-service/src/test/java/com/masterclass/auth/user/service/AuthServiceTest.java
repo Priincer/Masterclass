@@ -20,6 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import com.masterclass.auth.user.domain.PasswordResetToken;
+import java.time.Instant;
 
 import java.util.Optional;
 import java.util.Set;
@@ -42,6 +44,9 @@ class AuthServiceTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private PasswordResetService passwordResetService;
 
     @InjectMocks
     private AuthService authService;
@@ -95,7 +100,7 @@ class AuthServiceTest {
         verify(userService).registerUser(request);
         verify(jwtTokenService).generateToken(any(SecurityUser.class));
         verify(refreshTokenService).createToken(user);
-        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService);
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService, passwordResetService);
     }
 
     // ------------------------------------------------------------------------
@@ -138,7 +143,7 @@ class AuthServiceTest {
         verify(userService).findByEmail("test@example.com");
         verify(jwtTokenService).generateToken(any(SecurityUser.class));
         verify(refreshTokenService).createToken(user);
-        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService);
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService, passwordResetService);
     }
 
     @Test
@@ -167,7 +172,7 @@ class AuthServiceTest {
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(authentication).getPrincipal();
         verify(userService).findByEmail("test@example.com");
-        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService);
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService, passwordResetService);
     }
 
     // ------------------------------------------------------------------------
@@ -179,7 +184,7 @@ class AuthServiceTest {
         authService.logoutCurrentUser(securityUser);
 
         verify(refreshTokenService).revokeAllForUser(user);
-        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService);
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService, passwordResetService);
     }
 
     // ------------------------------------------------------------------------
@@ -217,7 +222,7 @@ class AuthServiceTest {
         verify(refreshTokenService).revoke(existingToken);
         verify(refreshTokenService).createToken(user);
         verify(jwtTokenService).generateToken(any(SecurityUser.class));
-        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService);
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService, passwordResetService);
     }
 
     @Test
@@ -234,6 +239,100 @@ class AuthServiceTest {
                 });
 
         verify(refreshTokenService).findValidToken("invalid-token");
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService, passwordResetService);
+    }
+
+    // ------------------------------------------------------------------------
+    // requestPasswordReset
+    // ------------------------------------------------------------------------
+
+    @Test
+    void requestPasswordReset_shouldCreateToken_whenUserExists() {
+        String email = "test@example.com";
+
+        when(userService.findByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordResetService.createToken(user))
+                .thenReturn(PasswordResetToken.builder()
+                        .token("reset-token")
+                        .user(user)
+                        .createdAt(Instant.now())
+                        .expiresAt(Instant.now().plusSeconds(600))
+                        .used(false)
+                        .build()
+                );
+
+        authService.requestPasswordReset(email);
+
+        verify(userService).findByEmail(email);
+        verify(passwordResetService).createToken(user);
+        // Kein Mailversand hier – das macht später der Notification-Service
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService,
+                refreshTokenService, passwordResetService);
+    }
+
+    @Test
+    void requestPasswordReset_shouldDoNothing_whenUserDoesNotExist() {
+        String email = "unknown@example.com";
+
+        when(userService.findByEmail(email)).thenReturn(Optional.empty());
+
+        authService.requestPasswordReset(email);
+
+        verify(userService).findByEmail(email);
+        // Ganz wichtig: kein Token erzeugen und kein Fehler werfen
+        verifyNoInteractions(passwordResetService);
         verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService, refreshTokenService);
+    }
+
+    // ------------------------------------------------------------------------
+    // resetPassword
+    // ------------------------------------------------------------------------
+
+    @Test
+    void resetPassword_shouldUpdatePassword_andRevokeTokens_whenTokenValid() {
+        String tokenValue = "valid-token";
+        String newPassword = "newPassword123";
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(tokenValue)
+                .user(user)
+                .createdAt(Instant.now().minusSeconds(60))
+                .expiresAt(Instant.now().plusSeconds(300))
+                .used(false)
+                .build();
+
+        when(passwordResetService.findValidToken(tokenValue))
+                .thenReturn(Optional.of(resetToken));
+
+        authService.resetPassword(tokenValue, newPassword);
+
+        verify(passwordResetService).findValidToken(tokenValue);
+        verify(userService).updatePassword(user, newPassword);
+        verify(passwordResetService).markAsUsed(resetToken);
+        verify(refreshTokenService).revokeAllForUser(user);
+        verifyNoMoreInteractions(authenticationManager, userService, jwtTokenService,
+                refreshTokenService, passwordResetService);
+    }
+
+    @Test
+    void resetPassword_shouldThrowApiException_whenTokenInvalid() {
+        String tokenValue = "invalid-token";
+
+        when(passwordResetService.findValidToken(tokenValue))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.resetPassword(tokenValue, "irrelevant"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    ApiException apiEx = (ApiException) ex;
+                    assertThat(apiEx.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(apiEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_PASSWORD_RESET_TOKEN);
+                });
+
+        verify(passwordResetService).findValidToken(tokenValue);
+        // Keine Passwortänderung & keine Revokes bei ungültigem Token
+        verifyNoInteractions(userService, refreshTokenService);
+        verifyNoMoreInteractions(passwordResetService);
+        verifyNoInteractions(authenticationManager, jwtTokenService);
     }
 }

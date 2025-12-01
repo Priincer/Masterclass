@@ -46,4 +46,11 @@ public class UserService {
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
+
+    @Transactional
+    public void updatePassword(User user, String rawPassword) {
+        String encoded = passwordEncoder.encode(rawPassword);
+        user.setPassword(encoded);
+        userRepository.save(user);
+    }
 }
