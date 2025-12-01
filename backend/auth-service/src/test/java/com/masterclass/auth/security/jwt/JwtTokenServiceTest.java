@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import javax.crypto.KeyGenerator;
+import java.util.Base64;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,19 +18,26 @@ class JwtTokenServiceTest {
     private UserDetails userDetails;
 
     @BeforeEach
-    void setup() {
+    void setup() throws Exception {
+        // Sicheren, zufälligen 256-bit Schlüssel generieren
+        KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
+        keyGen.init(256);
+        byte[] rawKey = keyGen.generateKey().getEncoded();
+        String base64Key = Base64.getEncoder().encodeToString(rawKey);
+
         JwtProperties props = new JwtProperties();
-        props.setSecret("Fg3keRvQPIG54S/voN6Xj8ydifItzHbCgujHIwz6EiE="); // dein Base64-Secret
-        props.setExpirationMillis(3_600_000L); // 1 Stunde
+        props.setSecret(base64Key);
+        props.setExpirationMillis(3_600_000L);
 
         jwtTokenService = new JwtTokenService(props);
-        jwtTokenService.init(); // Key aus dem Secret erzeugen
+        jwtTokenService.init(); // Schlüssel bauen
 
         userDetails = User.withUsername("test@example.com")
                 .password("pw")
                 .authorities(Collections.emptyList())
                 .build();
     }
+
 
     @Test
     void generateToken_shouldContainCorrectSubject() {
