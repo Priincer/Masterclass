@@ -53,6 +53,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Postgres: DB für production ready -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
         <!-- Lombok: Boilerplate reduzieren -->
         <dependency>
             <groupId>org.projectlombok</groupId>

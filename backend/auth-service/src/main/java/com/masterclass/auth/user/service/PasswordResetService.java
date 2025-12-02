@@ -4,6 +4,7 @@ import com.masterclass.auth.user.domain.PasswordResetToken;
 import com.masterclass.auth.user.domain.User;
 import com.masterclass.auth.user.repository.PasswordResetTokenRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PasswordResetService {
@@ -38,8 +40,11 @@ public class PasswordResetService {
                 .expiresAt(expiresAt)
                 .used(false)
                 .build();
+        PasswordResetToken saved = passwordResetTokenRepository.save(token);
 
-        return passwordResetTokenRepository.save(token);
+        log.info("Password reset token for {}: {}", user.getEmail(), saved.getToken());
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
