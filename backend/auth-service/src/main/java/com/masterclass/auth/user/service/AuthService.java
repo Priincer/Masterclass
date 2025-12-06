@@ -10,6 +10,8 @@ import com.masterclass.auth.user.domain.User;
 import com.masterclass.auth.user.dto.AuthResponse;
 import com.masterclass.auth.user.dto.LoginRequest;
 import com.masterclass.auth.user.dto.RegisterRequest;
+import com.masterclass.auth.user.event.UserEventPublisher;
+import com.masterclass.auth.user.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +19,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +32,7 @@ public class AuthService {
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService passwordResetService;
+    private final UserEventPublisher userEventPublisher;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -35,6 +41,21 @@ public class AuthService {
         String token = jwtTokenService.generateToken(securityUser);
 
         RefreshToken refreshToken = refreshTokenService.createToken(user);
+
+        UserRegisteredEvent event = UserRegisteredEvent.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .roles(
+                        user.getRoles().stream()
+                                .map(Enum::name)
+                                .collect(Collectors.toSet())
+                )
+                .occurredAt(Instant.now())
+                .build();
+
+        userEventPublisher.publishUserRegistered(event);
 
         return AuthResponse.builder()
                 .accessToken(token)
