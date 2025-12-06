@@ -9,7 +9,7 @@ import lombok.Data;
 @Builder
 public class PasswordResetRequestDto {
 
-    @NotBlank
-    @Email
+    @NotBlank(message = "Email must not be blank")
+    @Email(message = "Must be a valid email")
     private String email;
 }
