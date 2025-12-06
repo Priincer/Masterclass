@@ -10,7 +10,9 @@ import com.masterclass.auth.user.domain.User;
 import com.masterclass.auth.user.dto.AuthResponse;
 import com.masterclass.auth.user.dto.LoginRequest;
 import com.masterclass.auth.user.dto.RegisterRequest;
+import com.masterclass.auth.user.event.PasswordResetRequestedEvent;
 import com.masterclass.auth.user.event.UserEventPublisher;
+import com.masterclass.auth.user.event.UserPasswordChangedEvent;
 import com.masterclass.auth.user.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -129,6 +131,16 @@ public class AuthService {
         userService.findByEmail(email).ifPresent(user -> {
             PasswordResetToken token = passwordResetService.createToken(user);
 
+            PasswordResetRequestedEvent event = PasswordResetRequestedEvent.builder()
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .resetToken(token.getToken())
+                    .occurredAt(Instant.now())
+                    .build();
+
+            // Event veröffentlichen (aktuell nur Logging)
+            userEventPublisher.publishPasswordResetRequested(event);
+
             // TODO: Token per Notification-Service versenden (z.B. E-Mail mit Link)
             // z.B. /reset-password?token=<token.getToken()>
         });
@@ -154,5 +166,13 @@ public class AuthService {
         passwordResetService.markAsUsed(validToken);
 
         refreshTokenService.revokeAllForUser(user);
+
+        UserPasswordChangedEvent event = UserPasswordChangedEvent.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .occurredAt(Instant.now())
+                .build();
+
+        userEventPublisher.publishUserPasswordChanged(event);
     }
 }

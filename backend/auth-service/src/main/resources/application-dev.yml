@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:authdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:authdb}
     username: ${DB_USERNAME:auth_user}
     password: ${DB_PASSWORD:auth_password}
     driver-class-name: org.postgresql.Driver

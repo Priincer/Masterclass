@@ -11,4 +11,14 @@ public class LoggingUserEventPublisher implements UserEventPublisher {
     public void publishUserRegistered(UserRegisteredEvent event) {
         log.info("UserRegisteredEvent published: {}", event);
     }
+
+    @Override
+    public void publishPasswordResetRequested(PasswordResetRequestedEvent event) {
+        log.info("PasswordResetRequestedEvent published: {}", event);
+    }
+
+    @Override
+    public void publishUserPasswordChanged(UserPasswordChangedEvent event) {
+        log.info("UserPasswordChangedEvent published: {}", event);
+    }
 }

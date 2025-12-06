@@ -4,4 +4,8 @@ public interface UserEventPublisher {
 
     void publishUserRegistered(UserRegisteredEvent event);
 
+    void publishPasswordResetRequested(PasswordResetRequestedEvent event);
+
+    void publishUserPasswordChanged(UserPasswordChangedEvent event);
+
 }
