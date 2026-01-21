@@ -1,0 +1,29 @@
+{
+  "type": "record",
+  "name": "PaymentRequestedV1",
+  "namespace": "com.masterclass.events.booking.payment.v1",
+  "doc": "Emitted when a payment flow is started for a booking (mock or real PSP).",
+  "fields": [
+    { "name": "eventId", "type": "string" },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" } },
+
+    { "name": "paymentId", "type": "long" },
+    { "name": "bookingId", "type": "long" },
+    { "name": "userId", "type": "long" },
+
+    { "name": "amountCents", "type": "int" },
+    { "name": "currency", "type": "string", "default": "EUR" },
+
+    {
+      "name": "provider",
+      "type": {
+        "type": "enum",
+        "name": "PaymentProviderV1",
+        "symbols": ["MOCK", "STRIPE", "PAYPAL"]
+      },
+      "default": "MOCK"
+    },
+
+    { "name": "idempotencyKey", "type": ["null", "string"], "default": null }
+  ]
+}

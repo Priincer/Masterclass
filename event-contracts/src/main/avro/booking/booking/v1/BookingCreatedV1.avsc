@@ -1,0 +1,43 @@
+{
+  "type": "record",
+  "name": "BookingCreatedV1",
+  "namespace": "com.masterclass.events.booking.booking.v1",
+  "doc": "Emitted when a user creates a booking for a coaching offer.",
+  "fields": [
+    { "name": "eventId", "type": "string" },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" } },
+
+    { "name": "bookingId", "type": "long" },
+    { "name": "userId", "type": "long" },
+    { "name": "coachId", "type": "long" },
+
+    {
+      "name": "coachingType",
+      "type": {
+        "type": "enum",
+        "name": "CoachingTypeV1",
+        "symbols": ["SOLO", "TEAM"]
+      }
+    },
+    { "name": "game", "type": "string", "default": "CALL_OF_DUTY" },
+
+    { "name": "scheduledAt", "type": ["null", { "type": "long", "logicalType": "timestamp-millis" }], "default": null },
+    { "name": "durationMinutes", "type": "int", "default": 60 },
+
+    { "name": "priceCents", "type": "int" },
+    { "name": "currency", "type": "string", "default": "EUR" },
+
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "BookingStatusV1",
+        "symbols": ["CREATED", "PAID", "CANCELLED"]
+      },
+      "default": "CREATED"
+    },
+
+    { "name": "notes", "type": ["null", "string"], "default": null },
+    { "name": "teamId", "type": ["null", "long"], "default": null }
+  ]
+}

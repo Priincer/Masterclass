@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "CoachProfileUpsertedV1",
+  "namespace": "com.masterclass.events.profile.coach.v1",
+  "doc": "Emitted when a coach profile is created or updated.",
+  "fields": [
+    { "name": "eventId", "type": "string" },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" } },
+
+    { "name": "coachId", "type": "long" },
+
+    { "name": "displayName", "type": "string" },
+    { "name": "bio", "type": ["null", "string"], "default": null },
+
+    { "name": "game", "type": "string", "default": "CALL_OF_DUTY" },
+    { "name": "languages", "type": { "type": "array", "items": "string" }, "default": [] },
+
+    { "name": "hourlyRateCents", "type": ["null", "int"], "default": null },
+    { "name": "currency", "type": "string", "default": "EUR" },
+
+    { "name": "verified", "type": "boolean", "default": false }
+  ]
+}

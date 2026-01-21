@@ -1,0 +1,61 @@
+{
+  "type": "record",
+  "name": "UserRegisteredV1",
+  "namespace": "com.masterclass.auth.user.v1",
+  "doc": "Event emitted when a new user successfully registers",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "Unique event id (UUID)"
+    },
+    {
+      "name": "occurredAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Event creation timestamp"
+    },
+    {
+      "name": "userId",
+      "type": "string",
+      "doc": "Unique user identifier"
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "doc": "User email address"
+    },
+    {
+      "name": "username",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Optional username"
+    },
+    {
+      "name": "roles",
+      "type": {
+        "type": "array",
+        "items": "string"
+      },
+      "doc": "Assigned roles at registration time"
+    },
+    {
+      "name": "provider",
+      "type": {
+        "type": "enum",
+        "name": "AuthProvider",
+        "symbols": [
+          "LOCAL",
+          "GOOGLE",
+          "DISCORD"
+        ]
+      },
+      "doc": "Authentication provider"
+    }
+  ]
+}

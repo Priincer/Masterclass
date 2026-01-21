@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "PaymentSucceededV1",
+  "namespace": "com.masterclass.events.booking.payment.v1",
+  "doc": "Emitted when a payment completed successfully.",
+  "fields": [
+    { "name": "eventId", "type": "string" },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" } },
+
+    { "name": "paymentId", "type": "long" },
+    { "name": "bookingId", "type": "long" },
+    { "name": "userId", "type": "long" },
+
+    { "name": "amountCents", "type": "int" },
+    { "name": "currency", "type": "string", "default": "EUR" },
+
+    { "name": "providerRef", "type": ["null", "string"], "default": null }
+  ]
+}
